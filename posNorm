@@ -1,0 +1,105 @@
+import cv2 
+import numpy as np
+import urllib.request
+from pyzbar import pyzbar
+from pyzbar.pyzbar import decode
+
+
+font = cv2.FONT_HERSHEY_SIMPLEX
+
+
+
+def callback(x):
+    pass
+
+
+
+"""
+def getQRS(img):
+    return [{
+        'polygon':QR.polygon,
+        'rect':QR.rect,
+        'text': QR.data.decode('utf-8')} 
+        for QR in pyzbar.decode(img)]
+"""
+
+
+#getPos, si la imagen percibida es un rectangulo con sus bordes en los bordes de la imagen
+#se considera tambien que haya mas de un codigo qr en la imagen
+def getPos(img):
+      dicts=[] 
+      
+      for barcode in decode(img):
+          #print(barcode.data)
+          myData=barcode.data.decode('utf-8')
+          print("texto: ", myData)
+          pts = np.array([barcode.polygon],np.int32)
+          pts = pts.reshape((-1,1,2))
+          pts2=barcode.rect
+
+          centrox = ((pts[0][0][0]+pts[2][0][0]))/2
+          centroy = ((pts[0][0][1]+pts[2][0][1]))/2
+          cv2.polylines(img,[pts],True, (255,0,0),5)
+          #print("centro:")
+          print("Cx :", centrox)
+          print("Cy :", centroy)
+          print("Largo :", pts2.width)
+          print("Ancho :", pts2.height)
+         
+          cv2.putText(img,myData,(pts2[0],pts2[1]),cv2.FONT_HERSHEY_SIMPLEX,0.9,(255,0,255),2)
+          #cv2.putText(img,"(x: " + str(int(centrox)) + ", y: " + str(int(centroy)) + ")",(centrox+10,centroy+10), font, 0.5,(255,255,255),1)
+          cv2.circle(img,(int(centrox), int(centroy)), 6, (0,0,255), -1)  
+           
+          #Centro de la card
+          Cx=centrox 
+          Cy=centroy
+          
+          #Tamaño de la card
+          wc = pts2.width
+          hc = pts2.height
+          
+          #Tamaño de la imagen
+          [W,H] = img.shape[:2]
+          
+          print("Tamaño de la imagen :  Largo:", W, " Ancho:", H )
+          
+          #Normalizando
+          [xn,yn]=[Cx/W,Cy/H]
+          [wn,hn]=[wc/W,hc/H]
+          
+          #diccionario con los datos de cada card
+          output= {"texto":myData, "x" :xn, "y" :yn,"w" :wn, "h" :hn}
+
+          #se cargan los diccionarios de cada card en la lista dicts
+          dicts.append(output)
+
+      #se devuelve dicts  
+      return dicts
+
+#test
+cv2.namedWindow("Deteccion",cv2.WINDOW_NORMAL)
+
+cam=cv2.VideoCapture('http://192.168.100.3:8080/video')
+url="http://192.168.100.3:8080/shot.jpg"
+cap=cam
+cap.set(3,640)
+cap.set(4,480)
+
+print(cam.isOpened())
+
+while (cam.isOpened()):
+    success,img=cap.read()
+    print(getPos(img))
+    cv2.imshow('Deteccion', img)
+    if ord('q') == cv2.waitKey(10):
+         exit(0)
+
+
+#Para un solo frame
+"""
+success,img=cap.read()
+print(getPos(img))
+cv2.imshow('Deteccion', img)
+if ord('q') == cv2.waitKey(0):
+         exit(0)
+"""
